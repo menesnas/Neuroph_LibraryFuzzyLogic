@@ -1,5 +1,9 @@
 package ml;
 
+import java.util.List;
+import java.util.ArrayList;
+import java.util.Arrays;
+
 import java.util.Scanner;
 import org.neuroph.core.data.DataSet;
 import org.neuroph.core.data.DataSetRow;
@@ -9,36 +13,42 @@ import org.neuroph.nnet.learning.MomentumBackpropagation;
 import utils.FileUtils;
 
 public class ANNTrainer {
+	
+	public static int[] BEST_TOPOLOGY = {2,10,1}; // varsayılan
 
-    // Normalizasyon Sabitleri (DataGenerator ile AYNI olmalı)
     private static final double MIN_TEMP = 0;
-    private static final double MAX_TEMP = 45;
-    private static final double MIN_DAYLIGHT = 0;
-    private static final double MAX_DAYLIGHT = 24;
+    private static final double MAX_TEMP = 40;
+    private static final double MIN_DAYLIGHT = 8;
+    private static final double MAX_DAYLIGHT = 15;
     private static final double MIN_LOAD = 1000;
     private static final double MAX_LOAD = 5000;
 
-    // Yardımcı Metot: Full dataseti yükler, karıştırır ve %75 Train - %25 Test olarak böler.
+    private static void saveEpochCSV(String fileName, double[] errors) {
+        try (java.io.FileWriter fw = new java.io.FileWriter("datasets/" + fileName)) {
+            for (int i = 0; i < errors.length; i++) {
+                fw.write(i + ";" + errors[i] + "\n");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
     private static DataSet[] getTrainTestSplit() {
-        // 1. Ana veri setini yükle
         DataSet fullSet = FileUtils.loadCSV("datasets/full_dataset.csv", 2, 1);
         
-        // 2. Veriyi karıştır (Rastgelelik şartı)
+        // Veriyi karıştır Rastgele
         fullSet.shuffle();
         
-        // 3. Bölme oranını belirle (%75)
+        // (%75)
         int totalRows = fullSet.size();
         int trainCount = (int) (totalRows * 0.75);
         
-        // 4. Alt veri setlerini oluştur
         DataSet trainSet = new DataSet(2, 1);
         DataSet testSet = new DataSet(2, 1);
         
-        // 5. Satırları dağıt
         for (int i = 0; i < totalRows; i++) {
             DataSetRow row = fullSet.getRowAt(i);
             if (i < trainCount) {
-                // Hata düzeltmesi: getRows().add kullanıldı
                 trainSet.getRows().add(row);
             } else {
                 testSet.getRows().add(row);
@@ -48,9 +58,7 @@ public class ANNTrainer {
         return new DataSet[] { trainSet, testSet };
     }
 
-    // ============================================================
-    // 1) Ağı Eğit ve Test Et (Momentumlu)
-    // ============================================================
+    // Ağı Eğit ve Test Et (MOMENTUMLU)
     public static void trainAndTestMomentum() {
         DataSet[] split = getTrainTestSplit();
         DataSet train = split[0];
@@ -58,7 +66,7 @@ public class ANNTrainer {
 
         System.out.println("Veri Seti Hazırlandı: " + train.size() + " Eğitim, " + test.size() + " Test verisi.");
 
-        MultiLayerPerceptron mlp = new MultiLayerPerceptron(2, 10, 1);
+        MultiLayerPerceptron mlp = new MultiLayerPerceptron(BEST_TOPOLOGY);
 
         MomentumBackpropagation mbp = new MomentumBackpropagation();
         mbp.setLearningRate(0.1);
@@ -77,9 +85,7 @@ public class ANNTrainer {
         System.out.println("					Test  MSE = " + testMSE);
     }
 
-    // ============================================================
-    // 2) Ağı Eğit ve Test Et (Momentumsuz)
-    // ============================================================
+    // Ağı Eğit ve Test Et (MOMENTUMSUZ)
     public static void trainAndTestNoMomentum() {
         DataSet[] split = getTrainTestSplit();
         DataSet train = split[0];
@@ -87,7 +93,7 @@ public class ANNTrainer {
         
         System.out.println("Veri Seti Hazırlandı: " + train.size() + " Eğitim, " + test.size() + " Test verisi.");
 
-        MultiLayerPerceptron mlp = new MultiLayerPerceptron(2, 10, 1);
+        MultiLayerPerceptron mlp = new MultiLayerPerceptron(BEST_TOPOLOGY);
 
         BackPropagation bp = new BackPropagation();
         bp.setLearningRate(0.1);
@@ -105,9 +111,8 @@ public class ANNTrainer {
         System.out.println("					Test  MSE = " + testMSE);
     }
 
-    // ============================================================
-    // 3) Ağı Eğit Epoch Göster
-    // ============================================================
+    
+    // Ağı Eğit Epoch Göster
     public static void trainWithEpochShow() {
         DataSet[] split = getTrainTestSplit();
         DataSet train = split[0];
@@ -117,42 +122,38 @@ public class ANNTrainer {
         System.out.print("Eğitim kaç epoch sürsün? (Max 5000): ");
         int maxEpochs = sc.nextInt();
 
-        // Kullanıcı 5000'den fazla girerse sınırı 5000'e çekelim
+        // 5000'den fazla girilirse 5000 olur 
         if (maxEpochs > 5000) {
             System.out.println("! Uyarı: Maksimum sınır 5000'dir. 5000 epoch olarak ayarlandı.");
             maxEpochs = 5000;
         }
 
-        MultiLayerPerceptron mlp = new MultiLayerPerceptron(2, 10, 1);
+        MultiLayerPerceptron mlp = new MultiLayerPerceptron(BEST_TOPOLOGY);
 
         BackPropagation bp = new BackPropagation();
         bp.setLearningRate(0.1);
-        // Önemli: Her learn() çağrısı sadece 1 iterasyon yapacak, döngüyü biz elle kuruyoruz.
         bp.setMaxIterations(1); 
 
         mlp.setLearningRule(bp);
 
         System.out.println("					===== Epoch Gösterimi =====");
 
-        // Döngü 1'den başlayıp kullanıcının girdiği sayıya kadar döner
         for (int epoch = 1; epoch <= maxEpochs; epoch++) {
             mlp.learn(train);
 
             double trainMSE = ANNUtils.computeMSE(mlp, train);
             double testMSE = ANNUtils.computeMSE(mlp, test); 
 
-            System.out.println("					Epoch " + epoch + " | Train MSE = " + trainMSE + " | Test MSE = " + testMSE);
-        }
+            System.out.println(String.format("					Epoch %d | Train MSE = %.9f | Test MSE = %.9f", epoch, trainMSE, testMSE));        }
     }
 
-    // ============================================================
-    // 4) Ağı Eğit ve Tekli Test (Momentumlu)
-    // ============================================================
+
+    // Ağı Eğit ve Tekli Test (MOMENTUMLU)
     public static void singlePredictionMomentum() {
         DataSet[] split = getTrainTestSplit();
         DataSet train = split[0];
 
-        MultiLayerPerceptron mlp = new MultiLayerPerceptron(2, 10, 1);
+        MultiLayerPerceptron mlp = new MultiLayerPerceptron(BEST_TOPOLOGY);
 
         MomentumBackpropagation mbp = new MomentumBackpropagation();
         mbp.setLearningRate(0.1);
@@ -172,7 +173,7 @@ public class ANNTrainer {
         System.out.print("Gün ışığı süresi (saat) giriniz: ");
         double rawDaylight = sc.nextDouble();
         
-        // --- 1. NORMALİZASYON (Girdiyi 0-1 arasına çekme) ---
+        // Girdiyi 0-1 arasına çekme
         double normTemp = (rawTemp - MIN_TEMP) / (MAX_TEMP - MIN_TEMP);
         double normDaylight = (rawDaylight - MIN_DAYLIGHT) / (MAX_DAYLIGHT - MIN_DAYLIGHT);
         
@@ -180,10 +181,10 @@ public class ANNTrainer {
         mlp.setInput(normTemp, normDaylight);
         mlp.calculate();
 
-        // Ağdan normalize edilmiş çıktıyı al (0-1 arası)
+        // Ağdan normalize edilmiş çıktıyı al 
         double normOutput = mlp.getOutput()[0];
         
-        // --- 2. DENORMALİZASYON (Çıktıyı gerçek değere çevirme) ---
+        // Çıktıyı gerçek değere çevirme
         double realOutput = (normOutput * (MAX_LOAD - MIN_LOAD)) + MIN_LOAD;
 
         System.out.println("-------------------------------------");
@@ -193,9 +194,8 @@ public class ANNTrainer {
         System.out.println("-------------------------------------");
     }
 
-    // ============================================================
-    // 5) K-Fold Cross Validation
-    // ============================================================
+    
+    // K-Fold Cross Validation
     public static void kFoldTest() {
         Scanner sc = new Scanner(System.in);
         System.out.print("K değerini giriniz: ");
@@ -230,7 +230,7 @@ public class ANNTrainer {
                 }
             }
 
-            MultiLayerPerceptron mlp = new MultiLayerPerceptron(2, 10, 1);
+            MultiLayerPerceptron mlp = new MultiLayerPerceptron(BEST_TOPOLOGY);
             BackPropagation bp = new BackPropagation();
             bp.setLearningRate(0.1);
             mlp.setLearningRule(bp);
@@ -251,4 +251,89 @@ public class ANNTrainer {
         System.out.println("					ORTALAMA Test  MSE : " + (totalTestMSE / k));
         System.out.println("					======================================");
     }
+
+	 // 10 Farklı Ağ Topolojisi Denemesi
+    public static void test10Networks() {
+
+        System.out.println(">>> 10 farklı ağ topolojisi epoch epoch test edilecek KAÇ EPOCH GİRİLSİN?...");
+
+        int[][] architectures = new int[][]{
+            {2, 3, 1},
+            {2, 5, 1},
+            {2, 7, 1},
+            {2, 10, 1},
+            {2, 15, 1},
+            {2, 5, 3, 1},
+            {2, 8, 4, 1},
+            {2, 12, 6, 1},
+            {2, 20, 10, 1},
+            {2, 30, 15, 1}
+        };
+
+        DataSet[] split = getTrainTestSplit();
+        DataSet train = split[0];
+        DataSet test = split[1];
+        Scanner sc = new Scanner(System.in);
+        System.out.print("EPOCH değerini giriniz (MAX 5.000): ");
+        int maxEpochs = sc.nextInt();
+     // 5000'den fazla girilirse 5000 olur 
+        if (maxEpochs > 5000) {
+            System.out.println("! Uyarı: Maksimum sınır 5000'dir. 5000 epoch olarak ayarlandı.");
+            maxEpochs = 5000;
+        }
+
+        List<double[]> allTrainErrors = new ArrayList<>();
+        List<double[]> allTestErrors = new ArrayList<>();
+
+        double bestTestMSE = Double.MAX_VALUE;
+        int[] bestTopology = null;
+
+        for (int i = 0; i < architectures.length; i++) {
+
+            int[] arch = architectures[i];
+            System.out.println("Ağ #" + (i+1) + " Topoloji: " + Arrays.toString(arch));
+
+            MultiLayerPerceptron mlp = new MultiLayerPerceptron(arch);
+            BackPropagation bp = new BackPropagation();
+            bp.setLearningRate(0.1);
+            bp.setMaxIterations(1); // manuel epoch kontrolü
+
+            mlp.setLearningRule(bp);
+
+            double[] trainErrors = new double[maxEpochs];
+            double[] testErrors = new double[maxEpochs];
+
+            for (int epoch = 0; epoch < maxEpochs; epoch++) {
+                mlp.learn(train);
+
+                double trainMSE = ANNUtils.computeMSE(mlp, train);
+                double testMSE = ANNUtils.computeMSE(mlp, test);
+
+                trainErrors[epoch] = trainMSE;
+                testErrors[epoch] = testMSE;
+            }
+
+            allTrainErrors.add(trainErrors);
+            allTestErrors.add(testErrors);
+
+            // En iyi modeli seç
+            double finalTest = testErrors[maxEpochs - 1];
+            if (finalTest < bestTestMSE) {
+                bestTestMSE = finalTest;
+                bestTopology = arch;
+            }
+        }
+
+        System.out.println("\n===== EN İYİ TOPOLOJİ =====");
+        System.out.println("Topoloji: " + Arrays.toString(bestTopology));
+        System.out.println(String.format("%d Test MSE: %.9f", bestTestMSE));
+        System.out.println("============================");
+
+        FileUtils.exportEpochErrors(allTrainErrors, allTestErrors);
+
+        System.out.println("\nEpoch hataları 'epoch_results.csv' dosyasına yazıldı.");
+        System.out.println("Bu dosyayı Excel veya Python ile grafiğe dökebilirsiniz.");
+    }
+
+
 }
