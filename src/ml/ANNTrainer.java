@@ -1,5 +1,5 @@
 package ml;
-
+import dataset.ModelCalculator;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -20,10 +20,10 @@ public class ANNTrainer {
     private static final double MAX_TEMP = 40;
     private static final double MIN_DAYLIGHT = 8;
     private static final double MAX_DAYLIGHT = 15;
-    private static final double MIN_LOAD = 1000;
-    private static final double MAX_LOAD = 5000;
-
-    private static void saveEpochCSV(String fileName, double[] errors) {
+    private static final double MIN_LOAD = 1269;
+    private static final double MAX_LOAD = 4438;
+    
+    static void saveEpochCSV(String fileName, double[] errors) {
         try (java.io.FileWriter fw = new java.io.FileWriter("datasets/" + fileName)) {
             for (int i = 0; i < errors.length; i++) {
                 fw.write(i + ";" + errors[i] + "\n");
@@ -185,7 +185,9 @@ public class ANNTrainer {
         double normOutput = mlp.getOutput()[0];
         
         // Çıktıyı gerçek değere çevirme
-        double realOutput = (normOutput * (MAX_LOAD - MIN_LOAD)) + MIN_LOAD;
+        // FCL gerçek min–max aralığını tekrar al
+        double[] mm = ModelCalculator.findRealMinMax();
+        double realOutput = normOutput * (mm[1] - mm[0]) + mm[0];
 
         System.out.println("-------------------------------------");
         System.out.println("Girilen Değerler (Ham): " + rawTemp + " °C, " + rawDaylight + " saat");
@@ -326,7 +328,7 @@ public class ANNTrainer {
 
         System.out.println("\n===== EN İYİ TOPOLOJİ =====");
         System.out.println("Topoloji: " + Arrays.toString(bestTopology));
-        System.out.println(String.format("%d Test MSE: %.9f", bestTestMSE));
+        System.out.println(String.format("Test MSE: %.9f", bestTestMSE));
         System.out.println("============================");
 
         FileUtils.exportEpochErrors(allTrainErrors, allTestErrors);

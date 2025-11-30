@@ -4,6 +4,27 @@ import net.sourceforge.jFuzzyLogic.FIS;
 
 public class ModelCalculator {
 
+	public static double[] findRealMinMax() {
+	    double realMin = Double.MAX_VALUE;
+	    double realMax = -Double.MAX_VALUE;
+
+	    // 20.000 rastgele FCL hesaplaması (istatistiksel olarak yeterli)
+	    for (int i = 0; i < 20000; i++) {
+	        double t = Math.random() * 40;      // 0–40 derece
+	        double d = 8 + Math.random() * 7;   // 8–15 saat
+
+	        double out = calculateElectricity(t, d);
+
+	        if (out < realMin) realMin = out;
+	        if (out > realMax) realMax = out;
+	    }
+
+	    System.out.println("Gerçek FCL Min Çıktı = " + realMin);
+	    System.out.println("Gerçek FCL Max Çıktı = " + realMax);
+
+	    return new double[]{ realMin, realMax };
+	}
+
     // FCL model dosyasının yolu
     private static final String FCL_PATH = "src/dataset/model.fcl";
 

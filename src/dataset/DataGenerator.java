@@ -1,23 +1,17 @@
 package dataset;
-
+import dataset.ModelCalculator;
 import java.io.FileWriter;
 import java.util.ArrayList;
 import java.util.List;
 
 public class DataGenerator {
 
-    // Normalizasyon Sabitleri
-    // Sıcaklık (0 - 40 arası varsayıldı)
     private static final double MIN_TEMP = 0;
     private static final double MAX_TEMP = 40;
-
-    // Gün Işığı (8 - 15 saat arası varsayıldı)
     private static final double MIN_DAYLIGHT = 8;
     private static final double MAX_DAYLIGHT = 15;
-
-    // Tüketim (1000 - 5000 kWh arası varsayıldı)
-    private static final double MIN_LOAD = 1000;
-    private static final double MAX_LOAD = 5000;
+    private static double MIN_LOAD;
+    private static double MAX_LOAD;
 
     // Rastgele sayı üreteci
     private static double rand(double min, double max) {
@@ -26,9 +20,14 @@ public class DataGenerator {
 
     public static void generateDataset() throws Exception {
 
+
         List<String> allRows = new ArrayList<>();
 
         System.out.println("Veri seti oluşturuluyor ve normalize ediliyor...");
+        // FCL modelinin gerçek aralığını otomatik bul
+        double[] mm = ModelCalculator.findRealMinMax();
+        MIN_LOAD = mm[0];
+        MAX_LOAD = mm[1];
 
         for (int i = 0; i < 4000; i++) {
 
