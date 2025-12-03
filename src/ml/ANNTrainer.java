@@ -13,16 +13,50 @@ import org.neuroph.nnet.learning.MomentumBackpropagation;
 import utils.FileUtils;
 
 public class ANNTrainer {
-	
-	public static int[] BEST_TOPOLOGY = {2,10,1}; // varsayılan
+    
+    public static int[] BEST_TOPOLOGY = {2, 10, 1}; 
 
+    // Sabitler
     private static final double MIN_TEMP = 0;
     private static final double MAX_TEMP = 40;
     private static final double MIN_DAYLIGHT = 8;
     private static final double MAX_DAYLIGHT = 15;
-    private static final double MIN_LOAD = 1269;
-    private static final double MAX_LOAD = 4438;
-    
+
+    public static double MIN_LOAD = 1269; 
+    public static double MAX_LOAD = 4438;
+
+    public static void loadConfig() {
+        try {
+            java.io.File f = new java.io.File("datasets/config.txt");
+            if (f.exists()) {
+                java.util.Scanner sc = new java.util.Scanner(f);
+                sc.useLocale(java.util.Locale.US); 
+                
+                if (sc.hasNextDouble()) MIN_LOAD = sc.nextDouble();
+                if (sc.hasNextDouble()) MAX_LOAD = sc.nextDouble();
+                
+                System.out.println("-> ANNTrainer Config Yüklendi: Min=" + MIN_LOAD + " | Max=" + MAX_LOAD);
+                sc.close();
+            } else {
+                System.out.println("! Config dosyası bulunamadı, varsayılan değerler kullanılacak.");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    // Dosyadan Min/Max okuyan metod
+    private static void loadNormalizationConfig() {
+        try (java.util.Scanner sc = new java.util.Scanner(new java.io.File("datasets/config.txt"))) {
+            if (sc.hasNextDouble()) MIN_LOAD = sc.nextDouble();
+            if (sc.hasNextDouble()) MAX_LOAD = sc.nextDouble();
+            System.out.println("-> ANNTrainer Config Yüklendi: Min Load=" + MIN_LOAD + " | Max Load=" + MAX_LOAD);
+        } catch (Exception e) {
+            System.err.println("!!! HATA: datasets/config.txt okunamadı. Lütfen önce DataGenerator çalıştırın.");
+            MIN_LOAD = 1269; 
+            MAX_LOAD = 4438;
+        }
+    }
     static void saveEpochCSV(String fileName, double[] errors) {
         try (java.io.FileWriter fw = new java.io.FileWriter("datasets/" + fileName)) {
             for (int i = 0; i < errors.length; i++) {
@@ -35,8 +69,6 @@ public class ANNTrainer {
 
     private static DataSet[] getTrainTestSplit() {
         DataSet fullSet = FileUtils.loadCSV("datasets/full_dataset.csv", 2, 1);
-        
-        // Veriyi karıştır Rastgele
         fullSet.shuffle();
         
         // (%75)
@@ -148,13 +180,20 @@ public class ANNTrainer {
     }
 
 
-    // Ağı Eğit ve Tekli Test (MOMENTUMLU)
+ // Ağı Eğit ve Tekli Test (MOMENTUMLU)
     public static void singlePredictionMomentum() {
+        
+        // !!! EKLENEN SATIR BURASI !!!
+        // Tahmin yapmadan önce güncel Min/Max değerlerini dosyadan oku
+        loadConfig(); 
+
         DataSet[] split = getTrainTestSplit();
         DataSet train = split[0];
 
+        // 1. Ağı Oluştur (Önceki adımda bulunan EN İYİ topolojiyi kullanıyoruz)
         MultiLayerPerceptron mlp = new MultiLayerPerceptron(BEST_TOPOLOGY);
 
+        // 2. Momentum Ayarları
         MomentumBackpropagation mbp = new MomentumBackpropagation();
         mbp.setLearningRate(0.1);
         mbp.setMomentum(0.7);
@@ -162,36 +201,40 @@ public class ANNTrainer {
         mlp.setLearningRule(mbp);
         
         System.out.println("Ağ eğitiliyor, lütfen bekleyiniz...");
-        mlp.learn(train);
+        mlp.learn(train); // Ağı eğit
 
         Scanner sc = new Scanner(System.in);
 
         System.out.println("\n--- TAHMİN MODÜLÜ ---");
+        System.out.println("NOT: Ondalıklı sayıları nokta (.) değil virgül (,) ile giriniz. Örn: 10,5");
+        
         System.out.print("Sıcaklık (°C) giriniz: ");
         double rawTemp = sc.nextDouble();
 
         System.out.print("Gün ışığı süresi (saat) giriniz: ");
         double rawDaylight = sc.nextDouble();
         
-        // Girdiyi 0-1 arasına çekme
+        // --- NORMALİZASYON ADIMI ---
         double normTemp = (rawTemp - MIN_TEMP) / (MAX_TEMP - MIN_TEMP);
         double normDaylight = (rawDaylight - MIN_DAYLIGHT) / (MAX_DAYLIGHT - MIN_DAYLIGHT);
         
         // Ağa normalize edilmiş değerleri ver
         mlp.setInput(normTemp, normDaylight);
+        
+        // Ağı çalıştır (Hesapla)
         mlp.calculate();
 
-        // Ağdan normalize edilmiş çıktıyı al 
+        // Ağdan normalize edilmiş çıktıyı al (0 ile 1 arasında bir sayıdır)
         double normOutput = mlp.getOutput()[0];
         
-        // Çıktıyı gerçek değere çevirme
-        // FCL gerçek min–max aralığını tekrar al
-        double[] mm = ModelCalculator.findRealMinMax();
-        double realOutput = normOutput * (mm[1] - mm[0]) + mm[0];
+        // --- DENORMALİZASYON ADIMI ---
+        // (loadConfig() sayesinde MIN_LOAD ve MAX_LOAD artık güncel)
+        double realOutput = normOutput * (MAX_LOAD - MIN_LOAD) + MIN_LOAD;
 
         System.out.println("-------------------------------------");
         System.out.println("Girilen Değerler (Ham): " + rawTemp + " °C, " + rawDaylight + " saat");
-        System.out.println("Ağ Çıktısı (Normalize): " + normOutput);
+        System.out.println("Kullanılan Normalizasyon Aralığı: Min=" + MIN_LOAD + " Max=" + MAX_LOAD);
+        System.out.println("Ağ Çıktısı (Normalize [0-1]): " + normOutput);
         System.out.println(">>> TAHMİN EDİLEN TÜKETİM: " + String.format("%.2f", realOutput) + " kWh");
         System.out.println("-------------------------------------");
     }
@@ -328,13 +371,14 @@ public class ANNTrainer {
 
         System.out.println("\n===== EN İYİ TOPOLOJİ =====");
         System.out.println("Topoloji: " + Arrays.toString(bestTopology));
-        System.out.println(String.format("Test MSE: %.9f", bestTestMSE));
-        System.out.println("============================");
+        
+        BEST_TOPOLOGY = bestTopology; 
 
+        System.out.println("============================");
         FileUtils.exportEpochErrors(allTrainErrors, allTestErrors);
 
         System.out.println("\nEpoch hataları 'epoch_results.csv' dosyasına yazıldı.");
-        System.out.println("Bu dosyayı Excel veya Python ile grafiğe dökebilirsiniz.");
+        utils.GraphPlotter.drawAndSaveGraph();
     }
 
 

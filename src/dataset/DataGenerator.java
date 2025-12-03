@@ -1,5 +1,6 @@
 package dataset;
 import dataset.ModelCalculator;
+import java.io.File;
 import java.io.FileWriter;
 import java.util.ArrayList;
 import java.util.List;
@@ -23,35 +24,29 @@ public class DataGenerator {
 
         List<String> allRows = new ArrayList<>();
 
-        System.out.println("Veri seti oluşturuluyor ve normalize ediliyor...");
-        // FCL modelinin gerçek aralığını otomatik bul
         double[] mm = ModelCalculator.findRealMinMax();
         MIN_LOAD = mm[0];
         MAX_LOAD = mm[1];
 
         for (int i = 0; i < 4000; i++) {
 
-            // Rastgele HAM veri üret (FCL uygun aralıkta)
             double rawTemp = rand(0, 40);       // 0 ile 40 derece arası
             double rawDaylight = rand(8, 15);   // 8 ile 15 saat arası
 
-            // FCL modelinden HAM çıktıyı hesapla
             double rawConsumption = ModelCalculator.calculateElectricity(rawTemp, rawDaylight);
 
-            // Verileri NORMALIZE ET (0 ile 1 arasına çek)
-            // Formül: (Değer - Min) / (Max - Min)
             
             double normTemp = (rawTemp - MIN_TEMP) / (MAX_TEMP - MIN_TEMP);
             double normDaylight = (rawDaylight - MIN_DAYLIGHT) / (MAX_DAYLIGHT - MIN_DAYLIGHT);
             double normConsumption = (rawConsumption - MIN_LOAD) / (MAX_LOAD - MIN_LOAD);
 
-            // Listeye ekle (Virgülle ayrılmış: input1, input2, output)
-            // Neuroph CSV formatı: Girdiler,Çıktılar
             allRows.add(normTemp + "," + normDaylight + "," + normConsumption);
         }
 
-        // Tek bir dosyaya kaydet (full_dataset.csv)
-        // ANNTrainer sınıfı bunu yükleyip %75-%25 bellek üzerinde bölecek.
+        File directory = new File("datasets");
+        if (!directory.exists()) {
+            directory.mkdirs();
+        }
         FileWriter writer = new FileWriter("datasets/full_dataset.csv");
         
         for (String row : allRows) {
@@ -59,9 +54,23 @@ public class DataGenerator {
         }
 
         writer.close();
+        try {
+            if (!directory.exists()) {
+            	directory.mkdirs(); 
+            }
 
+            java.io.FileWriter configWriter = new java.io.FileWriter("datasets/config.txt");
+            configWriter.write(String.format(java.util.Locale.US, "%.5f\n", MIN_LOAD));
+            configWriter.write(String.format(java.util.Locale.US, "%.5f\n", MAX_LOAD));
+            configWriter.close();
+            
+            System.out.println("✓ Config kaydedildi: Min=" + MIN_LOAD + " Max=" + MAX_LOAD);
+            
+        } catch (Exception e) {
+            System.err.println("Konfigürasyon dosyası kaydedilemedi!");
+            e.printStackTrace();
+        }
         System.out.println("✓ full_dataset.csv başarıyla oluşturuldu.");
         System.out.println("✓ Toplam Satır: " + allRows.size());
-        System.out.println("✓ Veriler [0-1] aralığına normalize edildi.");
     }
 }

@@ -6,12 +6,16 @@ import ml.ANNTrainer;
 public class Main {
 
     public static void main(String[] args) {
-    	try {
+        try {
             DataGenerator.generateDataset();
+            ANNTrainer.loadConfig();
+            
         } catch (Exception e) {
             e.printStackTrace();
         }
-    	ANNTrainer.test10Networks();
+        
+        ANNTrainer.test10Networks();
+        
         Scanner sc = new Scanner(System.in);
         while (true) {
             System.out.println("======================================");

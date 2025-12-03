@@ -19,9 +19,6 @@ public class ModelCalculator {
 	        if (out > realMax) realMax = out;
 	    }
 
-	    System.out.println("Gerçek FCL Min Çıktı = " + realMin);
-	    System.out.println("Gerçek FCL Max Çıktı = " + realMax);
-
 	    return new double[]{ realMin, realMax };
 	}
 

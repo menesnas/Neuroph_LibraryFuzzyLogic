@@ -1,0 +1,68 @@
+FUNCTION_BLOCK model
+
+VAR_INPUT
+	temperature: REAL;
+	day_light_duration: REAL;
+END_VAR
+
+VAR_OUTPUT
+	electricity_consumption: REAL;
+END_VAR
+
+FUZZIFY temperature
+	TERM cold :=(0,1) (15.74,1) (19.5,0);
+	TERM chill := (0,0) (15.75,1) (19.5,1) (26.94,0);
+	TERM warm := (19.5,0) (26.94,1) (33.32,0);
+	TERM hot := (26.94,0) (33.32,1) (36.63,1) (40,0);
+	TERM too_hot := (33.32,0) (36.64,1) (40,1);
+END_FUZZIFY
+
+FUZZIFY day_light_duration
+	TERM short :=(8,1) (12.49,1) (13.3,0);
+	TERM medium := (11.8, 0) (12.5,1) (13.99,1) (15,0);  
+	TERM long := (13.3,0) (14,1) (15,1);
+END_FUZZIFY
+
+DEFUZZIFY electricity_consumption 
+    TERM too_low := (1269,1) (1478,1) (1635,0);	
+    TERM low := (1269,0) (1477,1) (1832,1) (2063,0);
+    TERM average :=  (1635, 0) (1833,1) (2063,1) (2647,0);
+    TERM high := (1833,0) (2064,1) (2647,1) (3500,0);
+    TERM too_high := (2064,0) (2647,1) (3500,1); 
+    TERM maximum := (2647,0) (3500,1) (4438,1); 
+    METHOD : COG;
+    DEFAULT := 1833;
+END_DEFUZZIFY
+
+RULEBLOCK rules
+    AND : MIN; 
+    ACT : MIN;
+    ACCU : MAX;
+
+    RULE Rule1 : IF temperature IS cold AND day_light_duration IS short THEN electricity_consumption IS low;
+    RULE Rule2A : IF temperature IS cold AND day_light_duration IS medium THEN electricity_consumption IS low WITH 0.7;
+    RULE Rule2B : IF temperature IS cold AND day_light_duration IS medium THEN electricity_consumption IS too_low WITH 0.3;    
+    RULE Rule3 : IF temperature IS cold AND day_light_duration IS long THEN electricity_consumption IS too_low;
+    
+    RULE Rule4 : IF temperature IS chill AND day_light_duration IS short THEN electricity_consumption IS average;
+    RULE Rule5A : IF temperature IS chill AND day_light_duration IS medium THEN electricity_consumption IS average WITH 0.7;
+    RULE Rule5B : IF temperature IS chill AND day_light_duration IS medium THEN electricity_consumption IS average WITH 0.3;   
+    RULE Rule6 : IF temperature IS chill AND day_light_duration IS long THEN electricity_consumption IS low;
+    
+    RULE Rule7 : IF temperature IS warm AND day_light_duration IS short THEN electricity_consumption IS high;
+    RULE Rule8A : IF temperature IS warm AND day_light_duration IS medium THEN electricity_consumption IS high WITH 0.7;   
+    RULE Rule8B : IF temperature IS warm AND day_light_duration IS medium THEN electricity_consumption IS average WITH 0.3;   
+    RULE Rule9 : IF temperature IS warm AND day_light_duration IS long THEN electricity_consumption IS average ;
+    
+    RULE Rule10 : IF temperature IS hot AND day_light_duration IS short THEN electricity_consumption IS too_high;
+    RULE Rule11A : IF temperature IS hot AND day_light_duration IS medium THEN electricity_consumption IS too_high WITH 0.7;
+    RULE Rule11B : IF temperature IS hot AND day_light_duration IS medium THEN electricity_consumption IS high WITH 0.3;    
+    RULE Rule12 : IF temperature IS hot AND day_light_duration IS long THEN electricity_consumption IS high;
+    
+    RULE Rule13 : IF temperature IS too_hot AND day_light_duration IS short THEN electricity_consumption IS maximum; 
+    RULE Rule14A : IF temperature IS too_hot AND day_light_duration IS medium THEN electricity_consumption IS maximum WITH 0.7;
+    RULE Rule14B : IF temperature IS too_hot AND day_light_duration IS medium THEN electricity_consumption IS too_high WITH 0.3;
+    RULE Rule15 : IF temperature IS too_hot AND day_light_duration IS long THEN electricity_consumption IS too_high;
+END_RULEBLOCK
+
+END_FUNCTION_BLOCK
