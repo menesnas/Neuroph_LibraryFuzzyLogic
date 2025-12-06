@@ -112,9 +112,9 @@ public class ANNTrainer {
         double trainMSE = ANNUtils.computeMSE(mlp, train);
         double testMSE = ANNUtils.computeMSE(mlp, test);
 
-        System.out.println("					===== Momentumlu Eğitim Sonucu =====");
-        System.out.println("					Train MSE = " + trainMSE);
-        System.out.println("					Test  MSE = " + testMSE);
+        System.out.println("===== Momentumlu Eğitim Sonucu =====");
+        System.out.println("Train MSE = " + trainMSE);
+        System.out.println("Test  MSE = " + testMSE);
     }
 
     // Ağı Eğit ve Test Et (MOMENTUMSUZ)
@@ -138,9 +138,9 @@ public class ANNTrainer {
         double trainMSE = ANNUtils.computeMSE(mlp, train);
         double testMSE = ANNUtils.computeMSE(mlp, test);
 
-        System.out.println("					===== Momentumsuz Eğitim Sonucu =====");
-        System.out.println("					Train MSE = " + trainMSE);
-        System.out.println("					Test  MSE = " + testMSE);
+        System.out.println("===== Momentumsuz Eğitim Sonucu =====");
+        System.out.println("Train MSE = " + trainMSE);
+        System.out.println("Test  MSE = " + testMSE);
     }
 
     
@@ -168,7 +168,7 @@ public class ANNTrainer {
 
         mlp.setLearningRule(bp);
 
-        System.out.println("					===== Epoch Gösterimi =====");
+        System.out.println("===== Epoch Gösterimi =====");
 
         for (int epoch = 1; epoch <= maxEpochs; epoch++) {
             mlp.learn(train);
@@ -176,7 +176,7 @@ public class ANNTrainer {
             double trainMSE = ANNUtils.computeMSE(mlp, train);
             double testMSE = ANNUtils.computeMSE(mlp, test); 
 
-            System.out.println(String.format("					Epoch %d | Train MSE = %.9f | Test MSE = %.9f", epoch, trainMSE, testMSE));        }
+            System.out.println(String.format("	Epoch %d | Train MSE = %.9f | Test MSE = %.9f", epoch, trainMSE, testMSE));        }
     }
 
 
@@ -233,8 +233,6 @@ public class ANNTrainer {
 
         System.out.println("-------------------------------------");
         System.out.println("Girilen Değerler (Ham): " + rawTemp + " °C, " + rawDaylight + " saat");
-        System.out.println("Kullanılan Normalizasyon Aralığı: Min=" + MIN_LOAD + " Max=" + MAX_LOAD);
-        System.out.println("Ağ Çıktısı (Normalize [0-1]): " + normOutput);
         System.out.println(">>> TAHMİN EDİLEN TÜKETİM: " + String.format("%.2f", realOutput) + " kWh");
         System.out.println("-------------------------------------");
     }
@@ -291,10 +289,10 @@ public class ANNTrainer {
             System.out.println("Fold " + (fold + 1) + " | Train MSE = " + trainMSE + " | Test MSE = " + testMSE);
         }
 
-        System.out.println("					======================================");
-        System.out.println("					ORTALAMA Train MSE : " + (totalTrainMSE / k));
-        System.out.println("					ORTALAMA Test  MSE : " + (totalTestMSE / k));
-        System.out.println("					======================================");
+        System.out.println("	======================================");
+        System.out.println("	ORTALAMA Train MSE : " + (totalTrainMSE / k));
+        System.out.println("	ORTALAMA Test  MSE : " + (totalTestMSE / k));
+        System.out.println("	======================================");
     }
 
 	 // 10 Farklı Ağ Topolojisi Denemesi
